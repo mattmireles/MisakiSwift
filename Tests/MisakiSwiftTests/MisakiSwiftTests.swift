@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 @testable import MisakiSwift
 
@@ -9,6 +10,30 @@ let texts: [(originalText: String, britishPhonetization: String, americanPhoneit
    "“tə ʤˈAmz mˈɔːtɪmə, ˌɛmˌɑːsˌiːˈɛs, fɹɒm hɪz fɹˈɛndz ɒv ðə sˌiːsˌiːˈAʧ,” wɒz ɪnɡɹˈAvd əpˈɒn ɪt, wɪð ðə dˈAt “ˌAtˈiːn ˈAti fˈɔː.”",
    "“tə ʤˈAmz mˈɔɹTəməɹ, ˌɛmˌɑɹsˌiˈɛs, fɹʌm hɪz fɹˈɛndz ʌv ðə sˌisˌiˈAʧ,” wʌz ɪnɡɹˈAvd əpˈɑn ɪt, wɪð ðə dˈAt “ˌAtˈin ˈATi fˈɔɹ.”")
 ]
+
+@Test func testCompoundTensNormalization() {
+  let converter = EnglishNum2Word()
+  let cases: [(Int, String)] = [
+    (20, "twenty"),
+    (21, "twenty-one"),
+    (22, "twenty-two"),
+    (23, "twenty-three"),
+    (25, "twenty-five"),
+    (29, "twenty-nine"),
+    (30, "thirty"),
+    (35, "thirty-five"),
+    (39, "thirty-nine"),
+    (42, "forty-two"),
+    (54, "fifty-four"),
+    (99, "ninety-nine"),
+    (123, "one hundred and twenty-three"),
+    (254, "two hundred and fifty-four"),
+  ]
+
+  for (number, expected) in cases {
+    #expect(converter.convert(Decimal(number)) == expected)
+  }
+}
 
 @Test func testStrings_BritishPhonetization() async throws {
   let englishG2P = EnglishG2P(british: true)
