@@ -13,11 +13,10 @@ struct EnglishNum2Word {
   private let pointWord = "point"
   private let excludeTitle = ["and", "point", "minus"]
   
-  private let midNumWords: [(Int, String)] = [
-    (1000, "thousand"), (100, "hundred"),
-    (90, "ninety"), (80, "eighty"), (70, "seventy"),
-    (60, "sixty"), (50, "fifty"), (40, "forty"),
-    (30, "thirty"), (20, "twenty")
+  /// Indexed by `number / 10`; only indices 2...9 are used.
+  private let tensWords = [
+    "", "", "twenty", "thirty", "forty",
+    "fifty", "sixty", "seventy", "eighty", "ninety"
   ]
   
   private let lowNumWords = [
@@ -35,39 +34,25 @@ struct EnglishNum2Word {
     "ten": "tenth", "eleven": "eleventh", "twelve": "twelfth"
   ]
   
-  private var cards: [Int: String] = [:]
+  /// Scale words from largest to smallest, e.g. (1_000_000, "million") before (1000, "thousand").
+  private let scales: [(Int, String)]
   
   init() {
     // Initialize high number words
-    var cards: [Int: String] = [:]
+    var scales: [(Int, String)] = []
     let highWords = ["m", "b", "tr", "quadr", "quint", "sext", "sept", "oct", "non", "dec"]
     for (index, word) in highWords.enumerated() {
       let power = 6 + (index * 3)
       let val = pow(10.0, Double(power))
       if val <= Double(Int.max) {
         let intVal: Int = Int(val)
-        cards[intVal] = word + "illion"
+        scales.append((intVal, word + "illion"))
       } else {
         // Currently really, really large numbers are not handled
-      }      
+      }
     }
-    self.cards = cards
-  }
-  
-  private func merge(_ lPair: (String, Int), _ rPair: (String, Int)) -> (String, Int) {
-    let (lText, lNum) = lPair
-    let (rText, rNum) = rPair
-    
-    if lNum == 1 && rNum < 100 {
-      return (rText, rNum)
-    } else if 100 > lNum && lNum > rNum {
-      return ("\(lText)-\(rText)", lNum + rNum)
-    } else if lNum >= 100 && rNum < 100 {
-      return ("\(lText) and \(rText)", lNum + rNum)
-    } else if rNum > lNum {
-      return ("\(lText) \(rText)", lNum * rNum)
-    }
-    return ("\(lText), \(rText)", lNum + rNum)
+    scales.append((1000, "thousand"))
+    self.scales = scales.sorted { $0.0 > $1.0 }
   }
   
   private func toOrdinal(_ decimalNumber: Decimal) -> String {
@@ -114,15 +99,9 @@ struct EnglishNum2Word {
     
     // Handle numbers from 21-99
     if number < 100 {
-      let tens = (number / 10) * 10
+      let tensWord = tensWords[number / 10]
       let ones = number % 10
-      if ones == 0 {
-        return midNumWords.first { $0.0 == tens }?.1 ?? ""
-      } else {
-        let tensWord = midNumWords.first { $0.0 == tens }?.1 ?? ""
-        let onesWord = lowNumWords[20 - ones]
-        return "\(tensWord)-\(onesWord)"
-      }
+      return ones == 0 ? tensWord : "\(tensWord)-\(lowNumWords[20 - ones])"
     }
     
     // Handle hundreds
@@ -138,30 +117,13 @@ struct EnglishNum2Word {
     }
     
     // Handle thousands and higher
-    for (value, word) in midNumWords.sorted(by: { $0.0 > $1.0 }) {
-      if number >= value {
-        let quotient = number / value
-        let remainder = number % value
-        let quotientWord = toCardinal(quotient)
-        if remainder == 0 {
-          return "\(quotientWord) \(word)"
-        } else {
-          return "\(quotientWord) \(word), \(toCardinal(remainder))"
-        }
-      }
-    }
-    
-    // Handle very large numbers using cards
-    for (value, word) in cards.sorted(by: { $0.key > $1.key }) {
-      if number >= value {
-        let quotient = number / value
-        let remainder = number % value
-        let quotientWord = toCardinal(quotient)
-        if remainder == 0 {
-          return "\(quotientWord) \(word)"
-        } else {
-          return "\(quotientWord) \(word), \(toCardinal(remainder))"
-        }
+    for (value, word) in scales where number >= value {
+      let quotientWord = toCardinal(number / value)
+      let remainder = number % value
+      if remainder == 0 {
+        return "\(quotientWord) \(word)"
+      } else {
+        return "\(quotientWord) \(word), \(toCardinal(remainder))"
       }
     }
     

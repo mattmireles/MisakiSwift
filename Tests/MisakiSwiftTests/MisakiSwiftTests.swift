@@ -35,6 +35,38 @@ let texts: [(originalText: String, britishPhonetization: String, americanPhoneit
   }
 }
 
+@Test func testLargeNumberNormalization() {
+  let converter = EnglishNum2Word()
+  let cases: [(Int, String)] = [
+    (1000, "one thousand"),
+    (2025, "two thousand, twenty-five"),
+    (21000, "twenty-one thousand"),
+    (999_999, "nine hundred and ninety-nine thousand, nine hundred and ninety-nine"),
+    (1_000_000, "one million"),
+    (2_500_000, "two million, five hundred thousand"),
+    (1_000_001, "one million, one"),
+    (3_000_000_000, "three billion"),
+  ]
+
+  for (number, expected) in cases {
+    #expect(converter.convert(Decimal(number)) == expected)
+  }
+}
+
+@Test func testYearNormalization() {
+  let converter = EnglishNum2Word()
+  let cases: [(Int, String)] = [
+    (1923, "nineteen twenty-three"),
+    (2000, "two thousand"),
+    (2007, "two thousand, seven"),
+    (2025, "twenty twenty-five"),
+  ]
+
+  for (year, expected) in cases {
+    #expect(converter.convert(Decimal(year), to: .year) == expected)
+  }
+}
+
 @Test func testStrings_BritishPhonetization() async throws {
   let englishG2P = EnglishG2P(british: true)
   
